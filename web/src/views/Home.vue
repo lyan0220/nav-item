@@ -3,6 +3,9 @@
     :class="['home-container', textModeClass, { 'is-dark-overlay': isDarkOverlay }]"
     :style="containerStyles"
     @click="onBlankAreaClick"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
   >
     <div class="menu-bar-fixed" ref="menuBarContainer">
       <MenuBar 
@@ -156,20 +159,22 @@ const settings = ref({
 const prefersDark = ref(false);
 let colorSchemeMedia = null;
 
+const touchStartX = ref(0);
+const touchStartY = ref(0);
+const touchDeltaX = ref(0);
+const isSwiping = ref(false);
+
+const needScrollToTop = ref(false);
+
 function applyCustomCode(code) {
   if (typeof window === 'undefined') return;
-
   const containerId = 'nav-custom-code-container';
   const inlineScriptId = 'nav-custom-inline-script';
-
   const oldContainer = document.getElementById(containerId);
   if (oldContainer) oldContainer.remove();
-
   const oldInlineScript = document.getElementById(inlineScriptId);
   if (oldInlineScript) oldInlineScript.remove();
-
   if (!code || !code.trim()) return;
-
   if (!code.includes('<')) {
     const script = document.createElement('script');
     script.id = inlineScriptId;
@@ -177,12 +182,10 @@ function applyCustomCode(code) {
     document.body.appendChild(script);
     return;
   }
-
   const wrapper = document.createElement('div');
   wrapper.id = containerId;
   wrapper.innerHTML = code;
   document.body.appendChild(wrapper);
-
   const scripts = wrapper.querySelectorAll('script');
   scripts.forEach(oldScript => {
     const newScript = document.createElement('script');
@@ -232,18 +235,14 @@ const backgroundStyles = computed(() => {
 const dynamicTextColor = computed(() => {
   const mode = settings.value.text_color_mode || 'auto';
   const hasBgImage = !!(settings.value.bg_url_pc || settings.value.bg_url_mobile);
-
   if (prefersDark.value) {
     return '#ffffff';
   }
-
   if (!hasBgImage) {
     return '#000000';
   }
-
   if (mode === 'white') return '#ffffff';
   if (mode === 'black') return '#000000';
-
   return '#000000';
 });
 
@@ -343,6 +342,45 @@ const handleResize = () => {
   });
 };
 
+function getScrollContainer() {
+  if (typeof document === 'undefined') return null;
+  const candidates = [
+    document.scrollingElement,
+    document.documentElement,
+    document.body,
+    document.getElementById('app'),
+    document.querySelector('.home-container')
+  ];
+  for (const el of candidates) {
+    if (!el) continue;
+    const sh = el.scrollHeight || 0;
+    const ch = el.clientHeight || window.innerHeight;
+    if (sh > ch + 1) return el;
+  }
+  return document.scrollingElement || document.documentElement || document.body;
+}
+
+function scrollToTop() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const container = getScrollContainer();
+  const scrollOnce = () => {
+    if (container) {
+      if (typeof container.scrollTo === 'function') {
+        container.scrollTo(0, 0);
+      }
+      container.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+    window.scrollTo(0, -1);
+  };
+  scrollOnce();
+  setTimeout(scrollOnce, 16);
+  setTimeout(scrollOnce, 80);
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(scrollOnce);
+  }
+}
+
 onMounted(async () => {
   if (typeof window !== 'undefined' && window.matchMedia) {
     colorSchemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
@@ -358,8 +396,10 @@ onMounted(async () => {
     colorSchemeMedia._handler = handleSchemeChange;
   }
 
-  isMobile.value = window.innerWidth <= 768;
-  window.addEventListener('resize', handleResize);
+  isMobile.value = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', handleResize);
+  }
 
   getSettings().then(res => {
     const data = res.data || {};
@@ -380,6 +420,7 @@ onMounted(async () => {
     measureMenuBar();
     if (menus.value.length) {
       activeMenu.value = menus.value[0];
+      needScrollToTop.value = false;
       loadCards();
     }
   });
@@ -395,7 +436,9 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', handleResize);
+  }
   if (colorSchemeMedia && colorSchemeMedia._handler) {
     if (colorSchemeMedia.removeEventListener) {
       colorSchemeMedia.removeEventListener('change', colorSchemeMedia._handler);
@@ -426,7 +469,6 @@ watch(
 async function selectMenu(menu, parentMenu = null) {
   searchQuery.value = '';
   isGlobalSearchActive.value = false;
-
   if (parentMenu) {
     activeMenu.value = parentMenu;
     activeSubMenu.value = menu;
@@ -434,34 +476,41 @@ async function selectMenu(menu, parentMenu = null) {
     activeMenu.value = menu;
     activeSubMenu.value = null;
   }
+  needScrollToTop.value = true;
   loadCards();
 }
 
 async function loadCards() {
   if (!activeMenu.value) return;
-
   const cacheKey = activeSubMenu.value 
     ? `submenu-${activeSubMenu.value.id}` 
     : `menu-${activeMenu.value.id}`;
 
+  const applyCards = async (list) => {
+    cards.value = list || [];
+    await nextTick();
+    if (needScrollToTop.value) {
+      needScrollToTop.value = false;
+      scrollToTop();
+    }
+  };
+
   if (cardsCache.has(cacheKey)) {
-    cards.value = cardsCache.get(cacheKey);
+    await applyCards(cardsCache.get(cacheKey));
     return; 
   }
-
   try {
     const res = await getCards(activeMenu.value.id, activeSubMenu.value?.id);
-    cards.value = res.data;
     cardsCache.set(cacheKey, res.data);
+    await applyCards(res.data);
   } catch (error) {
     console.error("加载卡片失败:", error);
-    cards.value = []; 
+    await applyCards([]);
   }
 }
 
 function onSearchInput() {
   clearTimeout(debounceTimer); 
-  
   if (selectedEngine.value.name === 'site') {
     debounceTimer = setTimeout(() => {
       if (searchQuery.value.trim() === '') {
@@ -475,32 +524,31 @@ function onSearchInput() {
 
 async function handleSearch(isRealtime = false) {
   clearTimeout(debounceTimer);
-
   if (selectedEngine.value.name === 'site') {
     const query = searchQuery.value.trim();
     if (!query) {
       clearSearch();
       return;
     }
-
     const cacheKey = `search-${query}`;
-
     if (cardsCache.has(cacheKey)) {
       cards.value = cardsCache.get(cacheKey);
       isGlobalSearchActive.value = true;
       activeMenu.value = null; 
       activeSubMenu.value = null;
+      await nextTick();
+      scrollToTop();
       return; 
     }
-
     try {
       const res = await globalSearchCards(query);
       cards.value = res.data;
       cardsCache.set(cacheKey, res.data);
-      
       isGlobalSearchActive.value = true;
       activeMenu.value = null; 
       activeSubMenu.value = null;
+      await nextTick();
+      scrollToTop();
     } catch (error) {
       console.error("全局搜索失败:", error);
       if (!isRealtime) {
@@ -522,7 +570,61 @@ function onBlankAreaClick() {
 
 function handleLogoError(event) {
   event.target.style.display = 'none';
-  event.target.nextElementSibling.style.display = 'flex';
+  if (event.target.nextElementSibling) {
+    event.target.nextElementSibling.style.display = 'flex';
+  }
+}
+
+function onTouchStart(e) {
+  if (!isMobile.value) return;
+  if (!e.touches || e.touches.length === 0) return;
+  const t = e.touches[0];
+  touchStartX.value = t.clientX;
+  touchStartY.value = t.clientY;
+  touchDeltaX.value = 0;
+  isSwiping.value = true;
+}
+
+function onTouchMove(e) {
+  if (!isMobile.value || !isSwiping.value) return;
+  if (!e.touches || e.touches.length === 0) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touchStartX.value;
+  const dy = t.clientY - touchStartY.value;
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+  const threshold = 10;
+  if (absDx < threshold && absDy < threshold) return;
+  if (absDx > absDy) {
+    e.preventDefault();
+    touchDeltaX.value = dx;
+  } else {
+    isSwiping.value = false;
+  }
+}
+
+function onTouchEnd() {
+  if (!isMobile.value) return;
+  if (!isSwiping.value) return;
+  isSwiping.value = false;
+  const dx = touchDeltaX.value;
+  const threshold = 60;
+  if (Math.abs(dx) < threshold) return;
+  if (!menus.value.length) return;
+  let currentIndex = -1;
+  if (activeMenu.value) {
+    currentIndex = menus.value.findIndex(m => m.id === activeMenu.value.id);
+  }
+  if (currentIndex === -1) currentIndex = 0;
+  if (dx < 0) {
+    if (currentIndex < menus.value.length - 1) {
+      selectMenu(menus.value[currentIndex + 1]);
+    }
+  } else {
+    if (currentIndex > 0) {
+      selectMenu(menus.value[currentIndex - 1]);
+    }
+  }
 }
 </script>
 
