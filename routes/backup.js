@@ -101,31 +101,40 @@ router.post('/import', upload.any(), async (req, res) => {
     fs.unlink(file.path, () => {});
 
     const rootEntries = fs.readdirSync(extractRoot);
-    const mustRoot = ['database', 'uploads'];
+    const hasDatabaseRoot = rootEntries.includes('database');
+    const hasUploadsRoot = rootEntries.includes('uploads');
 
-    if (rootEntries.length !== 2 ||
-        !rootEntries.includes('database') ||
-        !rootEntries.includes('uploads')) {
-
+    if (!hasDatabaseRoot && !hasUploadsRoot) {
       return res.status(400).json({
         error: '备份文件结构不正确'
       });
     }
 
     const missing = [];
+
     const dbDir = path.join(extractRoot, 'database');
-    const dbFile = path.join(extractRoot, 'database', 'nav.db');
     const uploadsDir = path.join(extractRoot, 'uploads');
+
+    if (!hasDatabaseRoot || !fs.existsSync(dbDir)) {
+      missing.push('database 目录');
+    }
+    if (!hasUploadsRoot || !fs.existsSync(uploadsDir)) {
+      missing.push('uploads 目录');
+    }
+
+    const dbFile = path.join(extractRoot, 'database', 'nav.db');
     const uploadsDb = path.join(extractRoot, 'uploads', 'nav.db');
 
-    if (!fs.existsSync(dbDir)) missing.push('database 目录');
-    if (!fs.existsSync(dbFile)) missing.push('database/nav.db');
-    if (!fs.existsSync(uploadsDir)) missing.push('uploads 目录');
-    if (!fs.existsSync(uploadsDb)) missing.push('uploads/nav.db');
+    if (fs.existsSync(dbDir) && !fs.existsSync(dbFile)) {
+      missing.push('database/nav.db');
+    }
+    if (fs.existsSync(uploadsDir) && !fs.existsSync(uploadsDb)) {
+      missing.push('uploads/nav.db');
+    }
 
     if (missing.length) {
       return res.status(400).json({
-        error: `备份文件结构不正确，缺少：${missing.join('、')}`
+        error: `恢复失败，缺少：${missing.join('、')}`
       });
     }
 
