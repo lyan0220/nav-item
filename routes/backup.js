@@ -8,8 +8,7 @@ const unzipper = require('unzipper');
 const router = express.Router();
 
 const PROJECT_ROOT = path.join(__dirname, '..');
-const DB_DIR = path.join(PROJECT_ROOT, 'database');
-const DB_FILE = path.join(DB_DIR, 'nav.db');
+const DB_FILE = path.join(__dirname, '../database/nav.db');
 const UPLOADS_DIR = path.join(PROJECT_ROOT, 'uploads');
 const TEMP_DIR = path.join(PROJECT_ROOT, 'temp');
 
@@ -24,6 +23,11 @@ router.get('/export', async (req, res) => {
   const tempZipPath = path.join(TEMP_DIR, backupName);
 
   try {
+    if (!fs.existsSync(DB_FILE)) {
+      console.error('数据库文件不存在:', DB_FILE);
+      return res.status(500).json({ error: '找不到数据库文件，备份中止' });
+    }
+
     const output = fs.createWriteStream(tempZipPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
@@ -49,9 +53,7 @@ router.get('/export', async (req, res) => {
 
     archive.pipe(output);
 
-    if (fs.existsSync(DB_FILE)) {
-      archive.file(DB_FILE, { name: 'database/nav.db' });
-    }
+    archive.file(DB_FILE, { name: 'database/nav.db' });
 
     if (fs.existsSync(UPLOADS_DIR)) {
       archive.directory(UPLOADS_DIR, 'uploads');
@@ -124,8 +126,9 @@ router.post('/import', upload.any(), async (req, res) => {
       });
     }
 
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
+    const dbDir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
     }
     fs.copyFileSync(dbInBackup, DB_FILE);
 
