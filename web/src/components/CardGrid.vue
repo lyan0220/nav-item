@@ -1,10 +1,24 @@
 <template>
-  <div class="container card-grid" :class="animationClass">
-    <div v-for="(card, index) in cards" :key="card.id" 
-         class="link-item" 
-         :style="getCardStyle(index)">
-      <a :href="card.url" target="_blank" :title="getTooltip(card)" @click.prevent="handleClick(card.url)">
-        <img class="link-icon" :src="getLogo(card)" alt="" @error="onImgError($event, card)" loading="lazy">
+  <div class="container card-grid animate-convergeIn" :key="animationKey">
+    <div
+      v-for="(card, index) in cards"
+      :key="card.id"
+      class="link-item"
+      :style="getCardStyle(index)"
+    >
+      <a
+        :href="card.url"
+        target="_blank"
+        :title="getTooltip(card)"
+        @click.prevent="handleClick(card.url)"
+      >
+        <img
+          class="link-icon"
+          :src="getLogo(card)"
+          alt=""
+          @error="onImgError($event, card)"
+          loading="lazy"
+        >
         <span class="link-text">{{ truncate(card.title) }}</span>
       </a>
     </div>
@@ -12,54 +26,37 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 
-const props = defineProps({ cards: Array });
-
-const animationClass = ref('');
-const animationType = ref('convergeIn');
-const animationTimer = ref(null);
-
-onMounted(() => {
-  if (props.cards && props.cards.length > 0) {
-    triggerAnimation();
+const props = defineProps({
+  cards: {
+    type: Array,
+    default: () => []
   }
 });
 
-watch(() => props.cards, (newCards, oldCards) => {
-  if (newCards && newCards.length > 0) {
-    const isDataChanged = !oldCards || oldCards.length === 0 || JSON.stringify(newCards) !== JSON.stringify(oldCards);
-    if (isDataChanged) {
-      nextTick(() => {
-        triggerAnimation();
-      });
-    }
-  }
-}, { deep: true, immediate: false });
+const animationKey = ref(0);
 
-function triggerAnimation() {
-  if (animationTimer.value) {
-    clearTimeout(animationTimer.value);
-  }
-  
-  animationClass.value = '';
-  
-  nextTick(() => {
-    animationType.value = 'convergeIn'; 
-    animationClass.value = `animate-${animationType.value}`;
-    
-    animationTimer.value = setTimeout(() => {
-      animationClass.value = '';
-      animationTimer.value = null;
-    }, 500);
-  });
-}
+watch(
+  () => props.cards,
+  (newCards, oldCards) => {
+    if (!newCards) return;
+    const oldLen = oldCards ? oldCards.length : 0;
+    const newLen = newCards.length;
+    if (newLen === 0) return;
+    if (!oldCards || oldLen === 0 || JSON.stringify(newCards) !== JSON.stringify(oldCards)) {
+      animationKey.value += 1;
+    }
+  },
+  { deep: true }
+);
 
 function getCardStyle(index) {
-  if (!animationClass.value) return {};
-  
-  const isMobile = window.innerWidth <= 480;
-  const cols = isMobile ? 3 : (window.innerWidth <= 768 ? 3 : (window.innerWidth <= 1200 ? 4 : 6));
+  if (!props.cards || !props.cards.length) return {};
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 480;
+  const width = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const cols = isMobile ? 3 : (width <= 768 ? 3 : (width <= 1200 ? 4 : 6));
   const col = index % cols;
   const row = Math.floor(index / cols);
   const centerCol = Math.floor(cols / 2);
@@ -67,8 +64,8 @@ function getCardStyle(index) {
 
   const distanceToCenterCol = Math.abs(col - centerCol);
   const distanceToCenterRow = Math.abs(row - centerRow);
-  
-  const delay = (distanceToCenterCol * 0.08 + distanceToCenterRow * 0.05);
+
+  const delay = distanceToCenterCol * 0.08 + distanceToCenterRow * 0.05;
 
   return {
     animationDelay: `${delay}s`
@@ -76,7 +73,9 @@ function getCardStyle(index) {
 }
 
 function handleClick(url) {
-  window.open(url, '_blank');
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank');
+  }
 }
 
 function getLogo(card) {
@@ -125,6 +124,7 @@ function truncate(str) {
   backface-visibility: hidden;
   perspective: 1000;
 }
+
 @media (max-width: 1200px) {
   .container {
     grid-template-columns: repeat(4, 1fr);
@@ -157,11 +157,12 @@ function truncate(str) {
   justify-content: center;
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  opacity: 0; 
+  opacity: 0;
   transform: translate(0, 0);
   transform: translateZ(0);
   backface-visibility: hidden;
 }
+
 @media (max-width: 480px) {
   .link-item {
     min-height: 75px;
@@ -175,7 +176,7 @@ function truncate(str) {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
-  
+
 .link-item a {
   text-decoration: none;
   color: #000;
@@ -190,18 +191,21 @@ function truncate(str) {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
+
 .link-icon {
   width: 25px;
   height: 25px;
   margin: 4px auto;
   object-fit: contain;
 }
+
 @media (max-width: 480px) {
   .link-icon {
     width: 22px;
     height: 22px;
   }
 }
+
 .link-text {
   padding-right: 4px;
   padding-left: 4px;
@@ -218,6 +222,7 @@ function truncate(str) {
   line-height: 1;
   min-height: 1.5em;
 }
+
 @media (max-width: 480px) {
   .link-text {
     font-size: 13px;
@@ -226,7 +231,6 @@ function truncate(str) {
 
 .animate-convergeIn .link-item {
   animation: convergeIn 0.5s ease-out forwards;
-  opacity: 0;
   transform: translateZ(0);
 }
 
@@ -240,11 +244,6 @@ function truncate(str) {
   }
 }
 
-.container:not(.animate-convergeIn) .link-item {
-  opacity: 1;
-  transform: translate(0, 0);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-convergeIn .link-item {
     animation: none;
@@ -253,4 +252,3 @@ function truncate(str) {
   }
 }
 </style>
-
