@@ -3,15 +3,12 @@ const db = require('../db');
 const auth = require('./authMiddleware');
 const router = express.Router();
 
-// 获取所有菜单（包含子菜单）
 router.get('/', (req, res) => {
   const { page, pageSize } = req.query;
   if (!page && !pageSize) {
-    // 获取主菜单
     db.all('SELECT * FROM menus ORDER BY "order"', [], (err, menus) => {
       if (err) return res.status(500).json({error: err.message});
       
-      // 为每个主菜单获取子菜单
       const getSubMenus = (menu) => {
         return new Promise((resolve, reject) => {
           db.all('SELECT * FROM sub_menus WHERE parent_id = ? ORDER BY "order"', [menu.id], (err, subMenus) => {
@@ -26,7 +23,6 @@ router.get('/', (req, res) => {
           const subMenus = await getSubMenus(menu);
           return { ...menu, subMenus };
         } catch (err) {
-          console.error('获取子菜单失败:', err);
           return { ...menu, subMenus: [] };
         }
       })).then(menusWithSubMenus => {
@@ -54,7 +50,6 @@ router.get('/', (req, res) => {
   }
 });
 
-// 获取指定菜单的子菜单
 router.get('/:id/submenus', (req, res) => {
   db.all('SELECT * FROM sub_menus WHERE parent_id = ? ORDER BY "order"', [req.params.id], (err, rows) => {
     if (err) return res.status(500).json({error: err.message});
@@ -62,7 +57,6 @@ router.get('/:id/submenus', (req, res) => {
   });
 });
 
-// 新增、修改、删除菜单需认证
 router.post('/', auth, (req, res) => {
   const { name, order } = req.body;
   db.run('INSERT INTO menus (name, "order") VALUES (?, ?)', [name, order || 0], function(err) {
@@ -86,7 +80,6 @@ router.delete('/:id', auth, (req, res) => {
   });
 });
 
-// 子菜单相关API
 router.post('/:id/submenus', auth, (req, res) => {
   const { name, order } = req.body;
   db.run('INSERT INTO sub_menus (parent_id, name, "order") VALUES (?, ?, ?)', 
@@ -111,4 +104,4 @@ router.delete('/submenus/:id', auth, (req, res) => {
   });
 });
 
-module.exports = router; 
+module.exports = router;
