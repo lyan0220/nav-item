@@ -5,6 +5,7 @@ const fs = require('fs');
 const multer = require('multer');
 const archiver = require('archiver');
 const unzipper = require('unzipper');
+const sqlite3 = require('sqlite3').verbose();
 
 const upload = multer({ dest: path.join(__dirname, '../temp') });
 
@@ -56,7 +57,9 @@ router.get('/export', async (req, res) => {
     const archive = archiver('zip', { zlib: { level: 9 } });
 
     output.on('close', () => {
-      res.download(tempPath, backupName, () => fs.unlink(tempPath, () => {}));
+      res.download(tempPath, backupName, () => {
+        fs.unlink(tempPath, () => {});
+      });
     });
 
     archive.on('error', err => { throw err; });
@@ -64,7 +67,32 @@ router.get('/export', async (req, res) => {
     archive.pipe(output);
 
     const dbPath = path.join(__dirname, '../database/nav.db');
-    if (fs.existsSync(dbPath)) archive.file(dbPath, { name: 'database/nav.db' });
+    if (fs.existsSync(dbPath)) {
+      const safeDbPath = path.join(tempDir, `nav_safe_${Date.now()}.db`);
+      fs.copyFileSync(dbPath, safeDbPath);
+
+      await new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(safeDbPath, err => {
+          if (err) return reject(err);
+          db.serialize(() => {
+            db.all("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (e, rows) => {
+              if (e || !rows || rows.length === 0) {
+                db.close(() => resolve());
+                return;
+              }
+              db.run("DELETE FROM users", err2 => {
+                db.close(() => {
+                  if (err2) return reject(err2);
+                  resolve();
+                });
+              });
+            });
+          });
+        });
+      });
+
+      archive.file(safeDbPath, { name: 'database/nav.db' });
+    }
 
     const uploadsDir = path.join(__dirname, '../uploads');
     if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
@@ -108,7 +136,6 @@ router.post('/import', upload.any(), async (req, res) => {
     const hasDatabaseDir = entryPaths.some(p => p === 'database/' || p.startsWith('database/'));
     const hasUploadsDir = entryPaths.some(p => p === 'uploads/' || p.startsWith('uploads/'));
     const hasDatabaseNav = entryPaths.includes('database/nav.db');
-    const hasUploadsNav = entryPaths.includes('uploads/nav.db');
 
     const missing = [];
 
@@ -122,14 +149,48 @@ router.post('/import', upload.any(), async (req, res) => {
     if (hasDatabaseDir && !hasDatabaseNav) {
       missing.push('database/nav.db');
     }
-    if (hasUploadsDir && !hasUploadsNav) {
-      missing.push('uploads/nav.db');
-    }
 
     if (missing.length) {
       fs.unlink(file.path, () => {});
       return res.status(400).json({
         error: `恢复失败，缺少：${missing.join('、')}`
+      });
+    }
+
+    const targetDbDir = path.join(__dirname, '../database');
+    if (!fs.existsSync(targetDbDir)) fs.mkdirSync(targetDbDir, { recursive: true });
+    const targetDbPath = path.join(targetDbDir, 'nav.db');
+
+    let userColumns = null;
+    let existingUsers = null;
+
+    if (fs.existsSync(targetDbPath)) {
+      await new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(targetDbPath, err => {
+          if (err) return resolve();
+          db.serialize(() => {
+            db.all("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (e, rows) => {
+              if (e || !rows || rows.length === 0) {
+                db.close(() => resolve());
+                return;
+              }
+              db.all("PRAGMA table_info(users)", (e2, cols) => {
+                if (e2 || !cols || cols.length === 0) {
+                  db.close(() => resolve());
+                  return;
+                }
+                userColumns = cols.map(c => c.name);
+                const colList = userColumns.map(c => `"${c}"`).join(',');
+                db.all(`SELECT ${colList} FROM users`, (e3, rows2) => {
+                  if (!e3 && rows2) {
+                    existingUsers = rows2;
+                  }
+                  db.close(() => resolve());
+                });
+              });
+            });
+          });
+        });
       });
     }
 
@@ -161,12 +222,42 @@ router.post('/import', upload.any(), async (req, res) => {
       return res.status(400).json({ error: '备份数据库格式不正确' });
     }
 
-    const targetDbDir = path.join(__dirname, '../database');
-    if (!fs.existsSync(targetDbDir)) fs.mkdirSync(targetDbDir, { recursive: true });
-    fs.copyFileSync(dbFile, path.join(targetDbDir, 'nav.db'));
+    fs.copyFileSync(dbFile, targetDbPath);
+
+    if (existingUsers && userColumns && userColumns.length) {
+      await new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(targetDbPath, err => {
+          if (err) return resolve();
+          db.serialize(() => {
+            db.all("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (e, rows) => {
+              if (e || !rows || rows.length === 0) {
+                db.close(() => resolve());
+                return;
+              }
+              const colList = userColumns.map(c => `"${c}"`).join(',');
+              const placeholders = userColumns.map(() => '?').join(',');
+              db.run('DELETE FROM users', err2 => {
+                if (err2) {
+                  db.close(() => resolve());
+                  return;
+                }
+                const stmt = db.prepare(`INSERT INTO users (${colList}) VALUES (${placeholders})`);
+                for (const row of existingUsers) {
+                  const values = userColumns.map(c => row[c]);
+                  stmt.run(values);
+                }
+                stmt.finalize(() => {
+                  db.close(() => resolve());
+                });
+              });
+            });
+          });
+        });
+      });
+    }
 
     const targetUploadsDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(targetUploadsDir)) fs.mkdirPathSync(targetUploadsDir, { recursive: true });
+    if (!fs.existsSync(targetUploadsDir)) fs.mkdirSync(targetUploadsDir, { recursive: true });
 
     clearDirSync(targetUploadsDir);
     copyDirSync(uploadsDir, targetUploadsDir);
