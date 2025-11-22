@@ -48,6 +48,7 @@ router.get('/export', async (req, res) => {
   try {
     const backupName = `backup_${Date.now()}.zip`;
     const tempPath = path.join(__dirname, `../temp/${backupName}`);
+
     const tempDir = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
@@ -90,6 +91,48 @@ router.post('/import', upload.any(), async (req, res) => {
     const tempRoot = path.join(__dirname, '../temp');
     if (!fs.existsSync(tempRoot)) fs.mkdirSync(tempRoot, { recursive: true });
 
+    const directory = await unzipper.Open.file(file.path);
+    const entryPaths = directory.files.map(e => e.path.replace(/\\/g, '/'));
+
+    const topLevelNames = new Set(entryPaths.map(p => p.split('/')[0]));
+    const hasTopDatabase = topLevelNames.has('database');
+    const hasTopUploads = topLevelNames.has('uploads');
+
+    if (!hasTopDatabase && !hasTopUploads) {
+      fs.unlink(file.path, () => {});
+      return res.status(400).json({
+        error: '备份文件结构不正确'
+      });
+    }
+
+    const hasDatabaseDir = entryPaths.some(p => p === 'database/' || p.startsWith('database/'));
+    const hasUploadsDir = entryPaths.some(p => p === 'uploads/' || p.startsWith('uploads/'));
+    const hasDatabaseNav = entryPaths.includes('database/nav.db');
+    const hasUploadsNav = entryPaths.includes('uploads/nav.db');
+
+    const missing = [];
+
+    if (!hasDatabaseDir) {
+      missing.push('database 目录');
+    }
+    if (!hasUploadsDir) {
+      missing.push('uploads 目录');
+    }
+
+    if (hasDatabaseDir && !hasDatabaseNav) {
+      missing.push('database/nav.db');
+    }
+    if (hasUploadsDir && !hasUploadsNav) {
+      missing.push('uploads/nav.db');
+    }
+
+    if (missing.length) {
+      fs.unlink(file.path, () => {});
+      return res.status(400).json({
+        error: `恢复失败，缺少：${missing.join('、')}`
+      });
+    }
+
     extractRoot = path.join(tempRoot, `import_${Date.now()}`);
     fs.mkdirSync(extractRoot, { recursive: true });
 
@@ -99,46 +142,13 @@ router.post('/import', upload.any(), async (req, res) => {
 
     fs.unlink(file.path, () => {});
 
-    const rootEntries = fs.readdirSync(extractRoot);
-    const hasDatabaseRoot = rootEntries.includes('database');
-    const hasUploadsRoot = rootEntries.includes('uploads');
-
-    if (!hasDatabaseRoot && !hasUploadsRoot) {
-      return res.status(400).json({
-        error: '备份文件结构不正确'
-      });
-    }
-
-    const missing = [];
-
     const dbDir = path.join(extractRoot, 'database');
     const uploadsDir = path.join(extractRoot, 'uploads');
-
-    if (!fs.existsSync(dbDir)) {
-      missing.push('database 目录');
-    }
-    if (!fs.existsSync(uploadsDir)) {
-      missing.push('uploads 目录');
-    }
-
-    const dbFile = path.join(extractRoot, 'database', 'nav.db');
-    const uploadsDb = path.join(extractRoot, 'uploads', 'nav.db');
-
-    if (fs.existsSync(dbDir) && !fs.existsSync(dbFile)) {
-      missing.push('database/nav.db');
-    }
-    if (fs.existsSync(uploadsDir) && !fs.existsSync(uploadsDb)) {
-      missing.push('uploads/nav.db');
-    }
-
-    if (missing.length) {
-      return res.status(400).json({
-        error: `恢复失败，缺少：${missing.join('、')}`
-      });
-    }
+    const dbFile = path.join(dbDir, 'nav.db');
 
     const stat = fs.statSync(dbFile);
     if (!stat.size) {
+      if (extractRoot && fs.existsSync(extractRoot)) removeDirSync(extractRoot);
       return res.status(400).json({ error: '备份中的数据库文件为空' });
     }
 
@@ -147,6 +157,7 @@ router.post('/import', upload.any(), async (req, res) => {
     fs.readSync(fd, header, 0, 16, 0);
     fs.closeSync(fd);
     if (!header.toString('utf8').startsWith('SQLite format 3')) {
+      if (extractRoot && fs.existsSync(extractRoot)) removeDirSync(extractRoot);
       return res.status(400).json({ error: '备份数据库格式不正确' });
     }
 
@@ -155,7 +166,7 @@ router.post('/import', upload.any(), async (req, res) => {
     fs.copyFileSync(dbFile, path.join(targetDbDir, 'nav.db'));
 
     const targetUploadsDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(targetUploadsDir)) fs.mkdirSync(targetUploadsDir, { recursive: true });
+    if (!fs.existsSync(targetUploadsDir)) fs.mkdirPathSync(targetUploadsDir, { recursive: true });
 
     clearDirSync(targetUploadsDir);
     copyDirSync(uploadsDir, targetUploadsDir);
