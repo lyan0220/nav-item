@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(compression());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'data/uploads')));
 app.use(express.static(path.join(__dirname, 'web/dist')));
 
 app.use((req, res, next) => {
