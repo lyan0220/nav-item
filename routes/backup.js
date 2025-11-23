@@ -95,7 +95,9 @@ router.get('/export', async (req, res) => {
     }
 
     const uploadsDir = path.join(__dirname, '../uploads');
-    if (fs.existsSync(uploadsDir)) archive.directory(uploadsDir, 'uploads');
+    if (fs.existsSync(uploadsDir)) {
+      archive.directory(uploadsDir, 'uploads');
+    }
 
     await archive.finalize();
   } catch (err) {
@@ -122,71 +124,46 @@ router.post('/import', upload.any(), async (req, res) => {
     const directory = await unzipper.Open.file(file.path);
     const entryPaths = directory.files.map(e => e.path.replace(/\\/g, '/'));
 
-    const topLevelNames = new Set(entryPaths.map(p => p.split('/')[0]));
-    const hasTopDatabase = topLevelNames.has('database');
-    const hasTopUploads = topLevelNames.has('uploads');
-
-    if (!hasTopDatabase && !hasTopUploads) {
-      fs.unlink(file.path, () => {});
-      return res.status(400).json({
-        error: '备份文件结构不正确'
-      });
-    }
-
-    const hasDatabaseDir = entryPaths.some(p => p === 'database/' || p.startsWith('database/'));
-    const hasUploadsDir = entryPaths.some(p => p === 'uploads/' || p.startsWith('uploads/'));
-    const hasDatabaseNav = entryPaths.includes('database/nav.db');
+    const hasDatabase = entryPaths.some(p => p.startsWith('database/'));
+    const hasUploads = entryPaths.some(p => p.startsWith('uploads/'));
+    const hasNavDb = entryPaths.includes('database/nav.db');
 
     const missing = [];
-
-    if (!hasDatabaseDir) {
-      missing.push('database 目录');
-    }
-    if (!hasUploadsDir) {
-      missing.push('uploads 目录');
-    }
-
-    if (hasDatabaseDir && !hasDatabaseNav) {
-      missing.push('database/nav.db');
-    }
+    if (!hasDatabase) missing.push('database 目录');
+    if (!hasUploads) missing.push('uploads 目录');
+    if (hasDatabase && !hasNavDb) missing.push('database/nav.db');
 
     if (missing.length) {
       fs.unlink(file.path, () => {});
-      return res.status(400).json({
-        error: `恢复失败，缺少：${missing.join('、')}`
-      });
+      return res.status(400).json({ error: `恢复失败，缺少：${missing.join('、')}` });
     }
 
     const targetDbDir = path.join(__dirname, '../database');
-    if (!fs.existsSync(targetDbDir)) fs.mkdirSync(targetDbDir, { recursive: true });
+    const targetUploadsDir = path.join(__dirname, '../uploads');
     const targetDbPath = path.join(targetDbDir, 'nav.db');
 
-    let userColumns = null;
+    if (!fs.existsSync(targetDbDir)) fs.mkdirSync(targetDbDir, { recursive: true });
+    if (!fs.existsSync(targetUploadsDir)) fs.mkdirSync(targetUploadsDir, { recursive: true });
+
     let existingUsers = null;
+    let userColumns = null;
 
     if (fs.existsSync(targetDbPath)) {
-      await new Promise((resolve, reject) => {
+      await new Promise(resolve => {
         const db = new sqlite3.Database(targetDbPath, err => {
           if (err) return resolve();
-          db.serialize(() => {
-            db.all("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (e, rows) => {
-              if (e || !rows || rows.length === 0) {
-                db.close(() => resolve());
-                return;
-              }
-              db.all("PRAGMA table_info(users)", (e2, cols) => {
-                if (e2 || !cols || cols.length === 0) {
-                  db.close(() => resolve());
-                  return;
-                }
-                userColumns = cols.map(c => c.name);
-                const colList = userColumns.map(c => `"${c}"`).join(',');
-                db.all(`SELECT ${colList} FROM users`, (e3, rows2) => {
-                  if (!e3 && rows2) {
-                    existingUsers = rows2;
-                  }
-                  db.close(() => resolve());
-                });
+          db.all("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (e, rows) => {
+            if (!rows || !rows.length) return db.close(resolve);
+
+            db.all("PRAGMA table_info(users)", (e2, cols) => {
+              if (!cols || !cols.length) return db.close(resolve);
+
+              userColumns = cols.map(c => c.name);
+              const colList = userColumns.map(c => `"${c}"`).join(',');
+
+              db.all(`SELECT ${colList} FROM users`, (e3, rows2) => {
+                existingUsers = rows2 || [];
+                db.close(resolve);
               });
             });
           });
@@ -195,7 +172,7 @@ router.post('/import', upload.any(), async (req, res) => {
     }
 
     extractRoot = path.join(tempRoot, `import_${Date.now()}`);
-    fs.mkdirSync(extractRoot, { recursive: true });
+    fs.mkdirSync(extractRoot);
 
     await fs.createReadStream(file.path)
       .pipe(unzipper.Extract({ path: extractRoot }))
@@ -203,75 +180,56 @@ router.post('/import', upload.any(), async (req, res) => {
 
     fs.unlink(file.path, () => {});
 
-    const dbDir = path.join(extractRoot, 'database');
-    const uploadsDir = path.join(extractRoot, 'uploads');
-    const dbFile = path.join(dbDir, 'nav.db');
+    const extractedDbFile = path.join(extractRoot, 'database', 'nav.db');
+    const extractedUploads = path.join(extractRoot, 'uploads');
 
-    const stat = fs.statSync(dbFile);
+    const stat = fs.statSync(extractedDbFile);
     if (!stat.size) {
-      if (extractRoot && fs.existsSync(extractRoot)) removeDirSync(extractRoot);
+      removeDirSync(extractRoot);
       return res.status(400).json({ error: '备份中的数据库文件为空' });
     }
 
     const header = Buffer.alloc(16);
-    const fd = fs.openSync(dbFile, 'r');
+    const fd = fs.openSync(extractedDbFile, 'r');
     fs.readSync(fd, header, 0, 16, 0);
     fs.closeSync(fd);
     if (!header.toString('utf8').startsWith('SQLite format 3')) {
-      if (extractRoot && fs.existsSync(extractRoot)) removeDirSync(extractRoot);
+      removeDirSync(extractRoot);
       return res.status(400).json({ error: '备份数据库格式不正确' });
     }
 
-    fs.copyFileSync(dbFile, targetDbPath);
+    fs.copyFileSync(extractedDbFile, targetDbPath);
+    fs.chmodSync(targetDbPath, 0o600);
 
-    if (existingUsers && userColumns && userColumns.length) {
-      await new Promise((resolve, reject) => {
+    if (existingUsers && existingUsers.length && userColumns) {
+      await new Promise(resolve => {
         const db = new sqlite3.Database(targetDbPath, err => {
           if (err) return resolve();
-          db.serialize(() => {
-            db.all("SELECT name FROM sqlite_master WHERE type='table' AND name='users'", (e, rows) => {
-              if (e || !rows || rows.length === 0) {
-                db.close(() => resolve());
-                return;
-              }
-              const colList = userColumns.map(c => `"${c}"`).join(',');
-              const placeholders = userColumns.map(() => '?').join(',');
-              db.run('DELETE FROM users', err2 => {
-                if (err2) {
-                  db.close(() => resolve());
-                  return;
-                }
-                const stmt = db.prepare(`INSERT INTO users (${colList}) VALUES (${placeholders})`);
-                for (const row of existingUsers) {
-                  const values = userColumns.map(c => row[c]);
-                  stmt.run(values);
-                }
-                stmt.finalize(() => {
-                  db.close(() => resolve());
-                });
-              });
-            });
+
+          const colList = userColumns.map(c => `"${c}"`).join(',');
+          const placeholders = userColumns.map(() => '?').join(',');
+
+          db.run("DELETE FROM users", () => {
+            const stmt = db.prepare(`INSERT INTO users (${colList}) VALUES (${placeholders})`);
+            for (const row of existingUsers) {
+              const values = userColumns.map(c => row[c]);
+              stmt.run(values);
+            }
+            stmt.finalize(() => db.close(resolve));
           });
         });
       });
     }
 
-    const targetUploadsDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(targetUploadsDir)) fs.mkdirSync(targetUploadsDir, { recursive: true });
-
     clearDirSync(targetUploadsDir);
-    copyDirSync(uploadsDir, targetUploadsDir);
+    copyDirSync(extractedUploads, targetUploadsDir);
 
-    if (extractRoot && fs.existsSync(extractRoot)) removeDirSync(extractRoot);
-
+    removeDirSync(extractRoot);
     res.json({ message: '恢复成功' });
+
   } catch (err) {
     console.error(err);
-
-    try {
-      if (extractRoot && fs.existsSync(extractRoot)) removeDirSync(extractRoot);
-    } catch {}
-
+    if (extractRoot && fs.existsSync(extractRoot)) removeDirSync(extractRoot);
     res.status(500).json({ error: '恢复失败' });
   }
 });
