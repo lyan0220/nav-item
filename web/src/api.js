@@ -1,4 +1,3 @@
-// src/api.js
 import axios from 'axios';
 const BASE = '/api';
 
@@ -127,14 +126,15 @@ export const uploadLogo = (file) => {
   });
 };
 
-export const uploadImageWithRemark = (file, remark = '') => {
+export function fileUpload(file, remark, onUploadProgress) {
   const formData = new FormData();
   formData.append('logo', file);
-  formData.append('remark', remark);
-  return axios.post(`${BASE}/upload`, formData, {
-    headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' }
+  formData.append('remark', remark || '');
+  return axios.post('/api/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress
   });
-};
+}
 
 export const getUploadImages = () => {
   return axios.get(`${BASE}/upload/files`, {
