@@ -22,25 +22,19 @@ function getShanghaiNowString() {
     acc[p.type] = p.value;
     return acc;
   }, {});
-  const year = parts.year;
-  const month = parts.month;
-  const day = parts.day;
-  const hour = parts.hour;
-  const minute = parts.minute;
-  const second = parts.second;
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = path.join(__dirname, '../uploads');
+    const dir = path.join(__dirname, '../data/uploads');
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     cb(null, dir);
   },
   filename: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads');
+    const uploadDir = path.join(__dirname, '../data/uploads');
     let originalName = file.originalname || 'file';
     originalName = Buffer.from(originalName, 'latin1').toString('utf8');
     originalName = originalName.replace(/[\/\\]/g, '_');
@@ -76,7 +70,6 @@ router.post('/', fileUpload.single('logo'), (req, res) => {
     [filename, url, remark, createdAt],
     function (err) {
       if (err) {
-        console.error('保存上传记录失败:', err);
         return res.status(500).json({ error: 'DB error' });
       }
       res.json({
@@ -96,7 +89,6 @@ router.get('/files', (req, res) => {
     [],
     (err, rows) => {
       if (err) {
-        console.error('读取上传记录失败:', err);
         return res.status(500).json({ error: 'DB error' });
       }
       res.json(rows);
@@ -109,23 +101,19 @@ router.delete('/:id', (req, res) => {
 
   db.get('SELECT filename FROM uploads WHERE id = ?', [id], (err, row) => {
     if (err) {
-      console.error('查询上传记录失败:', err);
       return res.status(500).json({ error: 'DB error' });
     }
     if (!row) {
       return res.status(404).json({ error: 'Not found' });
     }
 
-    const filepath = path.join(__dirname, '../uploads', row.filename);
+    const filepath = path.join(__dirname, '../data/uploads', row.filename);
 
     fs.unlink(filepath, (fsErr) => {
-      if (fsErr && fsErr.code !== 'ENOENT') {
-        console.error('删除文件失败:', fsErr);
-      }
+      if (fsErr && fsErr.code !== 'ENOENT') {}
 
       db.run('DELETE FROM uploads WHERE id = ?', [id], (delErr) => {
         if (delErr) {
-          console.error('删除上传记录失败:', delErr);
           return res.status(500).json({ error: 'DB error' });
         }
         res.json({ success: true });
