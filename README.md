@@ -99,7 +99,7 @@ nav-item/
 - `ADMIN_PASSWORD`: 管理员密码（默认: 123456）
 
 ### 数据库配置
-系统使用 SQLite 数据库，数据库文件会自动创建在项目/database/目录下，使用docker部署请挂载/app/database目录和/app/uploads目录实现数据持久化
+系统使用 SQLite 数据库，使用docker部署请挂载/app/data目录实现数据持久化
 ```
 
 ## 🚀 部署指南
@@ -140,8 +140,7 @@ cd .. && npm start
    docker run -d \
   --name nav-item \
   -p 3000:3000 \
-  -v $(pwd)/database:/app/database \
-  -v $(pwd)/uploads:/app/uploads \
+  -v $(pwd)/data:/app/data \
   -e ADMIN_USERNAME=admin \
   -e ADMIN_PASSWORD=123456 \
   leojyenn/nav-item:latest
@@ -161,8 +160,7 @@ services:
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=123456
     volumes:
-      - ./database:/app/database
-      - ./uploads:/app/uploads
+      - ./data:/app/data
     restart: unless-stopped
 ```
 ### 3: docker容器等使用docker image配合环境变量部署
@@ -200,6 +198,7 @@ ghcr.io/leojyenn/nav-item:latest
 ---
 
 ⭐ 如果这个项目对你有帮助，请给它一个星标！ 
+
 
 
 
