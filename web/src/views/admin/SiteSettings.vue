@@ -2,7 +2,7 @@
   <div class="site-settings">
     <div class="settings-header">
       <div class="header-content">
-        <h2 class="page-title">网站外观设置</h2>
+        <h2 class="page-title">外观设置</h2>
         <p class="page-subtitle">配置首页背景、文字颜色和自定义代码</p>
       </div>
     </div>
