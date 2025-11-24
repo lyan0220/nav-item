@@ -18,6 +18,21 @@
       </button>
     </div>
 
+    <div v-if="showProgress || message" class="center-status">
+      <div v-if="showProgress" class="progress-wrapper">
+        <div class="progress-bar">
+          <div class="progress-inner" :style="{ width: progress + '%' }"></div>
+        </div>
+        <span class="progress-text">
+          {{ progressMode === 'export' ? '正在导出备份文件…' : '正在导入并覆盖数据…' }}
+          ({{ Math.round(progress) }}%)
+        </span>
+      </div>
+      <div v-if="message" :class="['message', messageType]">
+        {{ message }}
+      </div>
+    </div>
+
     <div class="backup-card import-card">
       <h2 class="card-title">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -52,20 +67,6 @@
       <p v-if="selectedFile" class="file-name">
         已选择文件: {{ selectedFile.name }}
       </p>
-
-      <div v-if="showProgress" class="progress-wrapper">
-        <div class="progress-bar">
-          <div class="progress-inner" :style="{ width: progress + '%' }"></div>
-        </div>
-        <span class="progress-text">
-          {{ progressMode === 'export' ? '正在导出备份文件…' : '正在导入并覆盖数据…' }}
-          ({{ Math.round(progress) }}%)
-        </span>
-      </div>
-      
-      <div v-if="message" :class="['message', messageType]">
-        {{ message }}
-      </div>
     </div>
   </div>
 </template>
@@ -79,49 +80,62 @@ const isImporting = ref(false);
 const selectedFile = ref(null);
 const fileInput = ref(null);
 const message = ref('');
-const messageType = ref('success'); // 'success' | 'error'
+const messageType = ref('success');
 
 const progress = ref(0);
 const showProgress = ref(false);
-const progressMode = ref(null); // 'export' | 'import' | null
-let progressTimer = null;
+const progressMode = ref(null);
+let fakeTimer = null;
 
-function startProgress(mode) {
-  progressMode.value = mode;
-  showProgress.value = true;
-  progress.value = 0;
-  if (progressTimer) clearInterval(progressTimer);
-
-  progressTimer = setInterval(() => {
-    if (progress.value < 90) {
-      const delta = Math.random() * 8 + 2; // 2 - 10
-      progress.value = Math.min(progress.value + delta, 90);
-    } else {
-      progress.value = 90;
-    }
-  }, 300);
-}
-
-function finishProgress() {
-  if (progressTimer) {
-    clearInterval(progressTimer);
-    progressTimer = null;
+function resetProgress() {
+  if (fakeTimer) {
+    clearInterval(fakeTimer);
+    fakeTimer = null;
   }
-  progress.value = 100;
-  setTimeout(() => {
-    showProgress.value = false;
-    progressMode.value = null;
-    progress.value = 0;
-  }, 600);
+  showProgress.value = false;
+  progressMode.value = null;
+  progress.value = 0;
 }
 
 async function handleExport() {
+  if (isExporting.value || isImporting.value) return;
+
   isExporting.value = true;
   message.value = '';
-  startProgress('export');
+  messageType.value = 'success';
+  progressMode.value = 'export';
+  showProgress.value = true;
+  progress.value = 0;
+  if (fakeTimer) {
+    clearInterval(fakeTimer);
+    fakeTimer = null;
+  }
 
   try {
-    const response = await exportBackup();
+    const response = await exportBackup(event => {
+      if (event && event.lengthComputable) {
+        if (fakeTimer) {
+          clearInterval(fakeTimer);
+          fakeTimer = null;
+        }
+        const percent = Math.round((event.loaded / event.total) * 100);
+        progress.value = percent;
+      } else {
+        if (!fakeTimer) {
+          fakeTimer = setInterval(() => {
+            if (progress.value < 90) {
+              const delta = Math.random() * 8 + 2;
+              const next = progress.value + delta;
+              progress.value = next > 90 ? 90 : next;
+            }
+          }, 300);
+        }
+      }
+    });
+
+    if (progress.value < 100) {
+      progress.value = 100;
+    }
 
     const header = response.headers['content-disposition'];
     let filename = 'nav-backup.zip';
@@ -150,13 +164,19 @@ async function handleExport() {
     messageType.value = 'error';
   } finally {
     isExporting.value = false;
-    finishProgress();
+    if (fakeTimer) {
+      clearInterval(fakeTimer);
+      fakeTimer = null;
+    }
+    setTimeout(() => {
+      resetProgress();
+    }, 600);
   }
 }
 
 function onFileSelected(event) {
   selectedFile.value = event.target.files[0] || null;
-  message.value = ''; 
+  message.value = '';
 }
 
 async function handleImport() {
@@ -175,16 +195,48 @@ async function handleImport() {
     return;
   }
 
+  if (isImporting.value || isExporting.value) return;
+
   isImporting.value = true;
   message.value = '正在导入，请稍候…';
   messageType.value = 'success';
-  startProgress('import');
+  progressMode.value = 'import';
+  showProgress.value = true;
+  progress.value = 0;
+  if (fakeTimer) {
+    clearInterval(fakeTimer);
+    fakeTimer = null;
+  }
 
   try {
     const formData = new FormData();
     formData.append('backupFile', selectedFile.value);
 
-    const response = await importBackup(formData);
+    const response = await importBackup(formData, event => {
+      if (event && event.lengthComputable) {
+        if (fakeTimer) {
+          clearInterval(fakeTimer);
+          fakeTimer = null;
+        }
+        const percent = Math.round((event.loaded / event.total) * 100);
+        progress.value = percent;
+      } else {
+        if (!fakeTimer) {
+          fakeTimer = setInterval(() => {
+            if (progress.value < 90) {
+              const delta = Math.random() * 8 + 2;
+              const next = progress.value + delta;
+              progress.value = next > 90 ? 90 : next;
+            }
+          }, 300);
+        }
+      }
+    });
+
+    if (progress.value < 100) {
+      progress.value = 100;
+    }
+
     message.value = response.data.message || '导入成功！';
     messageType.value = 'success';
 
@@ -198,7 +250,13 @@ async function handleImport() {
     messageType.value = 'error';
   } finally {
     isImporting.value = false;
-    finishProgress();
+    if (fakeTimer) {
+      clearInterval(fakeTimer);
+      fakeTimer = null;
+    }
+    setTimeout(() => {
+      resetProgress();
+    }, 600);
   }
 }
 </script>
@@ -313,8 +371,15 @@ async function handleImport() {
   color: #555;
 }
 
+.center-status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .progress-wrapper {
-  margin-top: 16px;
+  margin: 0;
+  padding: 0 4px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -341,7 +406,6 @@ async function handleImport() {
 }
 
 .message {
-  margin-top: 20px;
   padding: 12px;
   border-radius: 8px;
   font-weight: 500;
