@@ -27,12 +27,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: ⚙️ Auto-Tag and Set Version
+      - name: ⚙️ Auto-Tag and Set Version (Using GitHub Script)
         id: tag
-        uses: actions-ecosystem/action-release@v1
+        uses: actions/github-script@v7
         with:
-          increment: patch
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { tagName } = require('./.github/scripts/release-tag');
+            const newTag = await tagName({ github, context });
+            
+            core.setOutput('new_tag', newTag);
+            console.log(`Calculated new tag: ${newTag}`);
+        env:
+          NODE_PATH: ${{ github.workspace }}/node_modules
           
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -50,7 +57,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/nav-item:${{ steps.tag.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/nav-item:${{ steps.tag.outputs.new_tag }}
             ghcr.io/${{ github.repository_owner }}/nav-item:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
