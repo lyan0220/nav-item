@@ -29,11 +29,13 @@ jobs:
 
       - name: ⚙️ Auto-Tag and Set Version
         id: tag
-        uses: mathieudutour/github-tag-action@main
+        uses: anothr/tag-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}       
         with:
           default_release_type: 'patch'
-          tag_prefix: 'v'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          initial_version: v1.0.0
+          tag_prefix: v
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -51,7 +53,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/nav-item:${{ steps.tag.outputs.new_tag }}
+            ghcr.io/${{ github.repository_owner }}/nav-item:${{ steps.tag.outputs.tag }}
             ghcr.io/${{ github.repository_owner }}/nav-item:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
