@@ -706,7 +706,7 @@ function onTouchEnd() {
   min-height: 95vh;
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: static;
   padding-top: 50px;
   isolation: isolate;
   color: var(--global-text-color, #000);
@@ -882,7 +882,7 @@ function onTouchEnd() {
   align-items: center;
   justify-content: center;
   padding: 1.4rem 0;
-  position: relative;
+  position: static;
   z-index: 2;
 }
 
@@ -958,7 +958,7 @@ function onTouchEnd() {
   text-align: center;
   padding-top: 1rem;
   padding-bottom: 2rem;
-  position: relative;
+  position: static;
   z-index: 2;
 }
 
@@ -1123,7 +1123,7 @@ function onTouchEnd() {
 }
 
 :deep(.card-grid) {
-  position: relative;
+  position: static;
   z-index: 2;
 }
 
@@ -1270,3 +1270,4 @@ function onTouchEnd() {
   }
 }
 </style>
+
