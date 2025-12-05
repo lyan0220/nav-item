@@ -1,6 +1,10 @@
 <template>
   <div
-    :class="['home-container', textModeClass, { 'is-dark-overlay': isDarkOverlay }]"
+    :class="[
+      'home-container',
+      textModeClass,
+      { 'is-dark-overlay': isDarkOverlay },
+    ]"
     :style="containerStyles"
     @click="onBlankAreaClick"
     @dblclick="toggleBgVideoSound"
@@ -30,50 +34,74 @@
     ></video>
 
     <div class="menu-bar-fixed" ref="menuBarContainer">
-      <MenuBar 
+      <MenuBar
         :ref="menuBarRef"
-        :menus="menus" 
-        :activeId="activeMenu?.id" 
+        :menus="menus"
+        :activeId="activeMenu?.id"
         :activeSubMenuId="activeSubMenu?.id"
         @select="selectMenu"
       />
     </div>
-    
+
     <div class="search-section" :style="searchSectionStyle">
       <div class="search-box-wrapper">
         <div class="search-engine-select">
-          <button v-for="engine in searchEngines" :key="engine.name"
-            :class="['engine-btn', {active: selectedEngine.name === engine.name}]"
+          <button
+            v-for="engine in searchEngines"
+            :key="engine.name"
+            :class="[
+              'engine-btn',
+              { active: selectedEngine.name === engine.name },
+            ]"
             @click="selectEngine(engine)"
           >
             {{ engine.label }}
           </button>
-          
-          <a href="/admin" class="engine-btn admin-btn">
-            后台
-          </a>
+
+          <a href="/admin" class="engine-btn admin-btn"> 后台 </a>
         </div>
         <div class="search-container">
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            :placeholder="selectedEngine.placeholder" 
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="selectedEngine.placeholder"
             class="search-input"
             @keyup.enter="handleSearch"
-            @input="onSearchInput" 
+            @input="onSearchInput"
           />
-          <button v-if="searchQuery" class="clear-btn" @click="clearSearch" aria-label="清空" title="clear">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+          <button
+            v-if="searchQuery"
+            class="clear-btn"
+            @click="clearSearch"
+            aria-label="清空"
+            title="clear"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              stroke-width="2"
+            >
+              <path d="M18 6L6 18M6 6l12 12"></path>
+            </svg>
           </button>
           <button @click="handleSearch" class="search-btn" title="search">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
         </div>
       </div>
     </div>
-    
+
     <div v-if="leftAds.length" class="ad-space-fixed left-ad-fixed">
       <a v-for="ad in leftAds" :key="ad.id" :href="ad.url" target="_blank">
         <img :src="ad.img" alt="广告" />
@@ -84,48 +112,75 @@
         <img :src="ad.img" alt="广告" />
       </a>
     </div>
-    
-    <CardGrid :cards="cards" @click.stop /> 
-    
+
+    <CardGrid :cards="cards" @click.stop />
+
     <footer class="footer">
       <div class="footer-content">
         <button @click="showFriendLinks = true" class="friend-link-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+            ></path>
+            <path
+              d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+            ></path>
           </svg>
           友情链接
         </button>
         <p class="copyright">
           Copyright © 2025 Nav-Item |
-          <a href="https://github.com/LeoJyenn/nav-item" target="_blank" class="footer-link">Powered by LeoJyenn</a>
+          <a
+            href="https://github.com/LeoJyenn/nav-item"
+            target="_blank"
+            class="footer-link"
+            >Powered by LeoJyenn</a
+          >
         </p>
       </div>
     </footer>
 
-    <div v-if="showFriendLinks" class="modal-overlay" @click="showFriendLinks = false">
+    <div
+      v-if="showFriendLinks"
+      class="modal-overlay"
+      @click="showFriendLinks = false"
+    >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>友情链接</h3>
           <button @click="showFriendLinks = false" class="close-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M18 6L6 18M6 6l12 12"></path>
             </svg>
           </button>
         </div>
         <div class="modal-body">
           <div class="friend-links-grid">
-            <a 
-              v-for="friend in friendLinks" 
-              :key="friend.id" 
-              :href="friend.url" 
-              target="_blank" 
+            <a
+              v-for="friend in friendLinks"
+              :key="friend.id"
+              :href="friend.url"
+              target="_blank"
               class="friend-link-card"
             >
               <div class="friend-link-logo">
-                <img 
-                  v-if="friend.logo" 
-                  :src="friend.logo" 
+                <img
+                  v-if="friend.logo"
+                  :src="friend.logo"
                   :alt="friend.title"
                   @error="handleLogoError"
                 />
@@ -145,16 +200,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, nextTick, onBeforeUnmount } from 'vue'; 
-import { getMenus, getCards, getAds, getFriends, globalSearchCards, getSettings } from '../api'; 
-import MenuBar from '../components/MenuBar.vue';
-import CardGrid from '../components/CardGrid.vue';
+import {
+  ref,
+  onMounted,
+  computed,
+  watch,
+  nextTick,
+  onBeforeUnmount,
+} from "vue";
+import {
+  getMenus,
+  getCards,
+  getAds,
+  getFriends,
+  globalSearchCards,
+  getSettings,
+} from "../api";
+import MenuBar from "../components/MenuBar.vue";
+import CardGrid from "../components/CardGrid.vue";
 
 const menus = ref([]);
 const activeMenu = ref(null);
 const activeSubMenu = ref(null);
 const cards = ref([]);
-const searchQuery = ref('');
+const searchQuery = ref("");
 const leftAds = ref([]);
 const rightAds = ref([]);
 const showFriendLinks = ref(false);
@@ -170,12 +239,12 @@ const isMobile = ref(false);
 const menuBarHeight = ref(0);
 
 const settings = ref({
-  bg_url_pc: '',
-  bg_url_mobile: '',
-  bg_opacity: '1',
-  glass_opacity: '1', 
-  text_color_mode: 'auto',
-  custom_code: ''
+  bg_url_pc: "",
+  bg_url_mobile: "",
+  bg_opacity: "1",
+  glass_opacity: "1",
+  text_color_mode: "auto",
+  custom_code: "",
 });
 
 const prefersDark = ref(false);
@@ -192,61 +261,74 @@ const bgVideoPc = ref(null);
 const bgVideoMobile = ref(null);
 
 function applyCustomCode(code) {
-  if (typeof window === 'undefined') return;
-  const containerId = 'nav-custom-code-container';
-  const inlineScriptId = 'nav-custom-inline-script';
+  if (typeof window === "undefined") return;
+  const containerId = "nav-custom-code-container";
+  const inlineScriptId = "nav-custom-inline-script";
   const oldContainer = document.getElementById(containerId);
   if (oldContainer) oldContainer.remove();
   const oldInlineScript = document.getElementById(inlineScriptId);
   if (oldInlineScript) oldInlineScript.remove();
   if (!code || !code.trim()) return;
-  if (!code.includes('<')) {
-    const script = document.createElement('script');
+  if (!code.includes("<")) {
+    const script = document.createElement("script");
     script.id = inlineScriptId;
     script.textContent = code;
     document.body.appendChild(script);
     return;
   }
-  const wrapper = document.createElement('div');
+  const wrapper = document.createElement("div");
   wrapper.id = containerId;
   wrapper.innerHTML = code;
   document.body.appendChild(wrapper);
-  const scripts = wrapper.querySelectorAll('script');
-  scripts.forEach(oldScript => {
-    const newScript = document.createElement('script');
-    Array.from(oldScript.attributes).forEach(attr => {
+  const scripts = wrapper.querySelectorAll("script");
+  scripts.forEach((oldScript) => {
+    const newScript = document.createElement("script");
+    Array.from(oldScript.attributes).forEach((attr) => {
       newScript.setAttribute(attr.name, attr.value);
     });
-    newScript.textContent = oldScript.textContent || '';
+    newScript.textContent = oldScript.textContent || "";
     oldScript.parentNode.replaceChild(newScript, oldScript);
   });
 }
 
 const getExt = (url) => {
-  if (!url) return '';
-  const clean = url.split('?')[0];
-  const parts = clean.split('.');
-  if (parts.length <= 1) return '';
+  if (!url) return "";
+  const clean = url.split("?")[0];
+  const parts = clean.split(".");
+  if (parts.length <= 1) return "";
   return parts[parts.length - 1].toLowerCase();
 };
 
 const isImageUrl = (url) => {
   const ext = getExt(url);
-  return ['jpg','jpeg','png','gif','webp','bmp','svg','jfif','heic','cr2','raw']
-    .includes(ext);
+  return [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "bmp",
+    "svg",
+    "jfif",
+    "heic",
+    "cr2",
+    "raw",
+  ].includes(ext);
 };
 
 const isVideoUrl = (url) => {
   const ext = getExt(url);
-  return ['mp4','webm','ogg'].includes(ext);
+  return ["mp4", "webm", "ogg"].includes(ext);
 };
 
-const bgPcUrl = computed(() => settings.value.bg_url_pc || '');
-const bgMobileUrl = computed(() => settings.value.bg_url_mobile || '');
+const bgPcUrl = computed(() => settings.value.bg_url_pc || "");
+const bgMobileUrl = computed(() => settings.value.bg_url_mobile || "");
 const hasVideoBgPc = computed(() => isVideoUrl(bgPcUrl.value));
 const hasVideoBgMobile = computed(() => isVideoUrl(bgMobileUrl.value));
 const showVideoBgPc = computed(() => !prefersDark.value && hasVideoBgPc.value);
-const showVideoBgMobile = computed(() => !prefersDark.value && hasVideoBgMobile.value);
+const showVideoBgMobile = computed(
+  () => !prefersDark.value && hasVideoBgMobile.value
+);
 
 const backgroundStyles = computed(() => {
   const isDark = prefersDark.value;
@@ -254,112 +336,129 @@ const backgroundStyles = computed(() => {
   const rawGlass = settings.value.glass_opacity;
   const rawGlassOp = parseFloat(rawGlass);
   const glassOpacity = isNaN(rawGlassOp) ? 0.7 : rawGlassOp;
-  styles['--glass-color-rgb'] = '255, 255, 255'; 
-  styles['--glass-opacity'] = glassOpacity;
+  styles["--glass-color-rgb"] = "255, 255, 255";
+  styles["--glass-opacity"] = glassOpacity;
   const hoverOpacity = Math.min(glassOpacity + 0.15, 1.0);
-  styles['--glass-opacity-hover'] = hoverOpacity;
+  styles["--glass-opacity-hover"] = hoverOpacity;
   if (isDark) {
-    styles['--dynamic-bg-pc'] = '';
-    styles['--dynamic-bg-mobile'] = '';
-    styles['--dynamic-overlay-color'] = 'rgba(0, 0, 0, 0)';
+    // 暗色模式下仍然保留背景图片
+    const pcUrl = bgPcUrl.value;
+    const mobileUrl = bgMobileUrl.value;
+
+    if (pcUrl && isImageUrl(pcUrl)) {
+      styles["--dynamic-bg-pc"] = `url(${pcUrl})`;
+    } else {
+      styles["--dynamic-bg-pc"] = "";
+    }
+
+    if (mobileUrl && isImageUrl(mobileUrl)) {
+      styles["--dynamic-bg-mobile"] = `url(${mobileUrl})`;
+    } else {
+      styles["--dynamic-bg-mobile"] = "";
+    }
+
+    // 暗色模式下使用较浅的遮罩，确保背景图片可见
+    styles["--dynamic-overlay-color"] = "rgba(0, 0, 0, 0.4)";
     return styles;
   }
   const pcUrl = bgPcUrl.value;
   const mobileUrl = bgMobileUrl.value;
   const rawBgOp = parseFloat(settings.value.bg_opacity);
-  const opacity = isNaN(rawBgOp) ? 0.15 : rawBgOp; 
-  const overlayTint = 1.0 - opacity; 
+  const opacity = isNaN(rawBgOp) ? 0.15 : rawBgOp;
+  const overlayTint = 1.0 - opacity;
   if (pcUrl && isImageUrl(pcUrl)) {
-    styles['--dynamic-bg-pc'] = `url(${pcUrl})`;
+    styles["--dynamic-bg-pc"] = `url(${pcUrl})`;
   } else {
-    styles['--dynamic-bg-pc'] = '';
+    styles["--dynamic-bg-pc"] = "";
   }
   if (mobileUrl && isImageUrl(mobileUrl)) {
-    styles['--dynamic-bg-mobile'] = `url(${mobileUrl})`;
+    styles["--dynamic-bg-mobile"] = `url(${mobileUrl})`;
   } else {
-    styles['--dynamic-bg-mobile'] = '';
+    styles["--dynamic-bg-mobile"] = "";
   }
   if (pcUrl || mobileUrl) {
-    styles['--dynamic-overlay-color'] = `rgba(0, 0, 0, ${overlayTint})`;
+    styles["--dynamic-overlay-color"] = `rgba(0, 0, 0, ${overlayTint})`;
   } else {
-    styles['--dynamic-overlay-color'] = 'rgba(0, 0, 0, 0)';
+    styles["--dynamic-overlay-color"] = "rgba(0, 0, 0, 0)";
   }
   return styles;
 });
 
 const dynamicTextColor = computed(() => {
-  const mode = settings.value.text_color_mode || 'auto';
+  const mode = settings.value.text_color_mode || "auto";
   const hasBg = !!(settings.value.bg_url_pc || settings.value.bg_url_mobile);
   if (prefersDark.value) {
-    return '#ffffff';
+    return "#ffffff";
   }
   if (!hasBg) {
-    return '#000000';
+    return "#000000";
   }
-  if (mode === 'white') return '#ffffff';
-  if (mode === 'black') return '#000000';
-  return '#000000';
+  if (mode === "white") return "#ffffff";
+  if (mode === "black") return "#000000";
+  return "#000000";
 });
 
 const isDarkOverlay = computed(() => {
   if (prefersDark.value) return true;
-  const op = parseFloat(settings.value.bg_opacity || '1');
+  const op = parseFloat(settings.value.bg_opacity || "1");
   return op <= 0.5;
 });
 
 const containerStyles = computed(() => {
   return {
     ...backgroundStyles.value,
-    '--global-text-color': dynamicTextColor.value
+    "--global-text-color": dynamicTextColor.value,
+    "--text-shadow": "none",
   };
 });
 
 const textModeClass = computed(() => {
-  const mode = settings.value.text_color_mode || 'auto';
-  if (mode === 'white') return 'text-mode-white';
-  if (mode === 'black') return 'text-mode-black';
-  return 'text-mode-auto';
+  const mode = settings.value.text_color_mode || "auto";
+  if (mode === "white") return "text-mode-white";
+  if (mode === "black") return "text-mode-black";
+  return "text-mode-auto";
 });
 
 const searchSectionStyle = computed(() => {
   if (!isMobile.value) return {};
   const extraGap = 13;
   return {
-    marginTop: menuBarHeight.value > 0 ? `${menuBarHeight.value + extraGap}px` : '70px'
+    marginTop:
+      menuBarHeight.value > 0 ? `${menuBarHeight.value + extraGap}px` : "70px",
   };
 });
 
 const searchEngines = [
   {
-    name: 'site',
-    label: '站内',
-    placeholder: '站内搜索...',
-    url: q => `/search?query=${encodeURIComponent(q)}`
+    name: "site",
+    label: "站内",
+    placeholder: "站内搜索...",
+    url: (q) => `/search?query=${encodeURIComponent(q)}`,
   },
   {
-    name: 'google',
-    label: 'Google',
-    placeholder: 'Google 搜索...',
-    url: q => `https://www.google.com/search?q=${encodeURIComponent(q)}`
+    name: "google",
+    label: "Google",
+    placeholder: "Google 搜索...",
+    url: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
   },
   {
-    name: 'baidu',
-    label: '百度',
-    placeholder: '百度搜索...',
-    url: q => `https://www.baidu.com/s?wd=${encodeURIComponent(q)}`
+    name: "baidu",
+    label: "百度",
+    placeholder: "百度搜索...",
+    url: (q) => `https://www.baidu.com/s?wd=${encodeURIComponent(q)}`,
   },
   {
-    name: 'bing',
-    label: 'Bing',
-    placeholder: 'Bing 搜索...',
-    url: q => `https://www.bing.com/search?q=${encodeURIComponent(q)}`
+    name: "bing",
+    label: "Bing",
+    placeholder: "Bing 搜索...",
+    url: (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
   },
   {
-    name: 'yandex',
-    label: 'Yandex',
-    placeholder: 'Yandex 搜索...',
-    url: q => `https://yandex.com/search/?text=${encodeURIComponent(q)}`
-  }
+    name: "yandex",
+    label: "Yandex",
+    placeholder: "Yandex 搜索...",
+    url: (q) => `https://yandex.com/search/?text=${encodeURIComponent(q)}`,
+  },
 ];
 
 const selectedEngine = ref(searchEngines[0]);
@@ -369,7 +468,7 @@ function selectEngine(engine) {
 }
 
 function clearSearch() {
-  searchQuery.value = '';
+  searchQuery.value = "";
   if (isGlobalSearchActive.value) {
     isGlobalSearchActive.value = false;
     if (menus.value.length) {
@@ -398,13 +497,13 @@ const handleResize = () => {
 };
 
 function getScrollContainer() {
-  if (typeof document === 'undefined') return null;
+  if (typeof document === "undefined") return null;
   const candidates = [
     document.scrollingElement,
     document.documentElement,
     document.body,
-    document.getElementById('app'),
-    document.querySelector('.home-container')
+    document.getElementById("app"),
+    document.querySelector(".home-container"),
   ];
   for (const el of candidates) {
     if (!el) continue;
@@ -416,11 +515,11 @@ function getScrollContainer() {
 }
 
 function scrollToTop() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (typeof window === "undefined" || typeof document === "undefined") return;
   const container = getScrollContainer();
   const scrollOnce = () => {
     if (container) {
-      if (typeof container.scrollTo === 'function') {
+      if (typeof container.scrollTo === "function") {
         container.scrollTo(0, 0);
       }
       container.scrollTop = 0;
@@ -431,45 +530,48 @@ function scrollToTop() {
   scrollOnce();
   setTimeout(scrollOnce, 16);
   setTimeout(scrollOnce, 80);
-  if (typeof requestAnimationFrame === 'function') {
+  if (typeof requestAnimationFrame === "function") {
     requestAnimationFrame(scrollOnce);
   }
 }
 
 onMounted(async () => {
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    colorSchemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+  if (typeof window !== "undefined" && window.matchMedia) {
+    colorSchemeMedia = window.matchMedia("(prefers-color-scheme: dark)");
     prefersDark.value = colorSchemeMedia.matches;
     const handleSchemeChange = (e) => {
       prefersDark.value = e.matches;
     };
     if (colorSchemeMedia.addEventListener) {
-      colorSchemeMedia.addEventListener('change', handleSchemeChange);
+      colorSchemeMedia.addEventListener("change", handleSchemeChange);
     } else if (colorSchemeMedia.addListener) {
       colorSchemeMedia.addListener(handleSchemeChange);
     }
     colorSchemeMedia._handler = handleSchemeChange;
   }
 
-  isMobile.value = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', handleResize);
+  isMobile.value =
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false;
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", handleResize);
   }
 
-  getSettings().then(res => {
-    const data = res.data || {};
-    settings.value = {
-      ...settings.value,
-      ...data
-    };
-    if (!settings.value.custom_code && data.custom_css) {
-      settings.value.custom_code = data.custom_css || '';
-    }
-  }).catch(err => {
-    console.error("加载网站设置失败:", err);
-  });
-  
-  getMenus().then(async res => {
+  getSettings()
+    .then((res) => {
+      const data = res.data || {};
+      settings.value = {
+        ...settings.value,
+        ...data,
+      };
+      if (!settings.value.custom_code && data.custom_css) {
+        settings.value.custom_code = data.custom_css || "";
+      }
+    })
+    .catch((err) => {
+      console.error("加载网站设置失败:", err);
+    });
+
+  getMenus().then(async (res) => {
     menus.value = res.data;
     await nextTick();
     measureMenuBar();
@@ -480,23 +582,23 @@ onMounted(async () => {
     }
   });
 
-  getAds().then(adRes => {
-    leftAds.value = adRes.data.filter(ad => ad.position === 'left');
-    rightAds.value = adRes.data.filter(ad => ad.position === 'right');
+  getAds().then((adRes) => {
+    leftAds.value = adRes.data.filter((ad) => ad.position === "left");
+    rightAds.value = adRes.data.filter((ad) => ad.position === "right");
   });
-  
-  getFriends().then(friendRes => {
+
+  getFriends().then((friendRes) => {
     friendLinks.value = friendRes.data;
   });
 });
 
 onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', handleResize);
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", handleResize);
   }
   if (colorSchemeMedia && colorSchemeMedia._handler) {
     if (colorSchemeMedia.removeEventListener) {
-      colorSchemeMedia.removeEventListener('change', colorSchemeMedia._handler);
+      colorSchemeMedia.removeEventListener("change", colorSchemeMedia._handler);
     } else if (colorSchemeMedia.removeListener) {
       colorSchemeMedia.removeListener(colorSchemeMedia._handler);
     }
@@ -516,13 +618,13 @@ watch(
 watch(
   () => settings.value.custom_code,
   (newCode) => {
-    applyCustomCode(newCode || '');
+    applyCustomCode(newCode || "");
   },
   { immediate: true }
 );
 
 async function selectMenu(menu, parentMenu = null) {
-  searchQuery.value = '';
+  searchQuery.value = "";
   isGlobalSearchActive.value = false;
   if (parentMenu) {
     activeMenu.value = parentMenu;
@@ -537,8 +639,8 @@ async function selectMenu(menu, parentMenu = null) {
 
 async function loadCards() {
   if (!activeMenu.value) return;
-  const cacheKey = activeSubMenu.value 
-    ? `submenu-${activeSubMenu.value.id}` 
+  const cacheKey = activeSubMenu.value
+    ? `submenu-${activeSubMenu.value.id}`
     : `menu-${activeMenu.value.id}`;
 
   const applyCards = async (list) => {
@@ -552,7 +654,7 @@ async function loadCards() {
 
   if (cardsCache.has(cacheKey)) {
     await applyCards(cardsCache.get(cacheKey));
-    return; 
+    return;
   }
   try {
     const res = await getCards(activeMenu.value.id, activeSubMenu.value?.id);
@@ -565,21 +667,21 @@ async function loadCards() {
 }
 
 function onSearchInput() {
-  clearTimeout(debounceTimer); 
-  if (selectedEngine.value.name === 'site') {
+  clearTimeout(debounceTimer);
+  if (selectedEngine.value.name === "site") {
     debounceTimer = setTimeout(() => {
-      if (searchQuery.value.trim() === '') {
+      if (searchQuery.value.trim() === "") {
         clearSearch();
       } else {
-        handleSearch(true); 
+        handleSearch(true);
       }
-    }, 300); 
+    }, 300);
   }
 }
 
 async function handleSearch(isRealtime = false) {
   clearTimeout(debounceTimer);
-  if (selectedEngine.value.name === 'site') {
+  if (selectedEngine.value.name === "site") {
     const query = searchQuery.value.trim();
     if (!query) {
       clearSearch();
@@ -589,31 +691,31 @@ async function handleSearch(isRealtime = false) {
     if (cardsCache.has(cacheKey)) {
       cards.value = cardsCache.get(cacheKey);
       isGlobalSearchActive.value = true;
-      activeMenu.value = null; 
+      activeMenu.value = null;
       activeSubMenu.value = null;
       await nextTick();
       scrollToTop();
-      return; 
+      return;
     }
     try {
       const res = await globalSearchCards(query);
       cards.value = res.data;
       cardsCache.set(cacheKey, res.data);
       isGlobalSearchActive.value = true;
-      activeMenu.value = null; 
+      activeMenu.value = null;
       activeSubMenu.value = null;
       await nextTick();
       scrollToTop();
     } catch (error) {
       console.error("全局搜索失败:", error);
       if (!isRealtime) {
-        alert('搜索失败，请稍后重试。');
+        alert("搜索失败，请稍后重试。");
       }
     }
   } else {
     if (!searchQuery.value.trim()) return;
     const url = selectedEngine.value.url(searchQuery.value);
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   }
 }
 
@@ -641,9 +743,9 @@ function toggleBgVideoSound() {
 }
 
 function handleLogoError(event) {
-  event.target.style.display = 'none';
+  event.target.style.display = "none";
   if (event.target.nextElementSibling) {
-    event.target.nextElementSibling.style.display = 'flex';
+    event.target.nextElementSibling.style.display = "flex";
   }
 }
 
@@ -685,7 +787,7 @@ function onTouchEnd() {
   if (!menus.value.length) return;
   let currentIndex = -1;
   if (activeMenu.value) {
-    currentIndex = menus.value.findIndex(m => m.id === activeMenu.value.id);
+    currentIndex = menus.value.findIndex((m) => m.id === activeMenu.value.id);
   }
   if (currentIndex === -1) currentIndex = 0;
   if (dx < 0) {
@@ -714,6 +816,13 @@ function onTouchEnd() {
 
 .home-container * {
   color: var(--global-text-color, #000) !important;
+  text-shadow: var(--text-shadow, none);
+}
+
+/* 为白色文字添加基础阴影，提高在亮色背景下的可读性 */
+.home-container.text-mode-white *,
+.home-container.is-dark-overlay * {
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5), 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 .modal-content,
@@ -733,7 +842,7 @@ function onTouchEnd() {
 }
 
 .home-container::before {
-  content: '';
+  content: "";
   position: fixed;
   top: 0;
   left: 0;
@@ -747,7 +856,7 @@ function onTouchEnd() {
 }
 
 .home-container::after {
-  content: '';
+  content: "";
   position: fixed;
   top: 0;
   left: 0;
@@ -795,7 +904,7 @@ function onTouchEnd() {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding-bottom: .3rem;
+  padding-bottom: 0.3rem;
   gap: 5px;
   z-index: 2;
   flex-wrap: wrap;
@@ -804,7 +913,7 @@ function onTouchEnd() {
 .engine-btn {
   border: none;
   background: none;
-  font-size: .8rem;
+  font-size: 0.8rem;
   padding: 2px 10px;
   border-radius: 4px;
   cursor: pointer;
@@ -834,7 +943,7 @@ function onTouchEnd() {
   flex: 1;
   border: none;
   background: transparent;
-  padding: .1rem .5rem;
+  padding: 0.1rem 0.5rem;
   font-size: 1.2rem;
   outline: none;
 }
@@ -1270,4 +1379,3 @@ function onTouchEnd() {
   }
 }
 </style>
-
