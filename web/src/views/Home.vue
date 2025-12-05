@@ -805,11 +805,11 @@ function onTouchEnd() {
 <style scoped>
 .home-container {
   background-color: transparent;
-  min-height: 100vh;
+  min-height: 95vh;
   display: flex;
   flex-direction: column;
-  position: relative;
-  padding-top: 0;
+  position: static;
+  padding-top: 50px;
   isolation: isolate;
   color: var(--global-text-color, #000);
 }
@@ -997,8 +997,7 @@ function onTouchEnd() {
   align-items: center;
   justify-content: center;
   padding: 1.4rem 0;
-  position: sticky;
-  top: 60px;
+  position: static;
   z-index: 2;
 }
 
@@ -1074,10 +1073,7 @@ function onTouchEnd() {
   text-align: center;
   padding-top: 1rem;
   padding-bottom: 2rem;
-  position: sticky;
-  bottom: 0;
-  background: rgba(var(--glass-color-rgb), var(--glass-opacity));
-  backdrop-filter: blur(10px);
+  position: relative;
   z-index: 2;
 }
 
