@@ -805,11 +805,11 @@ function onTouchEnd() {
 <style scoped>
 .home-container {
   background-color: transparent;
-  min-height: 95vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  position: static;
-  padding-top: 50px;
+  position: relative;
+  padding-top: 0;
   isolation: isolate;
   color: var(--global-text-color, #000);
 }
@@ -823,6 +823,12 @@ function onTouchEnd() {
 .home-container.text-mode-white *,
 .home-container.is-dark-overlay * {
   text-shadow: 0 0 3px rgba(0, 0, 0, 0.5), 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+/* 搜索框内的文字不需要阴影，保持清晰 */
+.home-container.text-mode-white .search-input,
+.home-container.is-dark-overlay .search-input {
+  text-shadow: none;
 }
 
 .modal-content,
@@ -991,7 +997,8 @@ function onTouchEnd() {
   align-items: center;
   justify-content: center;
   padding: 1.4rem 0;
-  position: static;
+  position: sticky;
+  top: 60px;
   z-index: 2;
 }
 
@@ -1067,7 +1074,10 @@ function onTouchEnd() {
   text-align: center;
   padding-top: 1rem;
   padding-bottom: 2rem;
-  position: static;
+  position: sticky;
+  bottom: 0;
+  background: rgba(var(--glass-color-rgb), var(--glass-opacity));
+  backdrop-filter: blur(10px);
   z-index: 2;
 }
 
