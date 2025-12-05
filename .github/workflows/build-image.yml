@@ -26,21 +26,49 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: ⚙️ Auto-Tag and Set Version (Using GitHub Script)
-        id: tag
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { tagName } = require('./.github/scripts/release-tag');
-            const newTag = await tagName({ github, context });
-            
-            core.setOutput('new_tag', newTag);
-            console.log(`Calculated new tag: ${newTag}`);
-        env:
-          NODE_PATH: ${{ github.workspace }}/node_modules
           
+      - name: ⚙️ Auto-Increment Patch Version
+        id: tag
+        run: |
+          # --- 变量定义 ---
+          TAG_PREFIX="v"
+          START_TAG="${TAG_PREFIX}1.0.0"
+
+          # 1. 查找最新的Git标签 (v*.*.* 格式)
+          LATEST_TAG=$(git describe --tags --match "${TAG_PREFIX}*.*.*" --abbrev=0 2>/dev/null || echo "$START_TAG")
+          echo "Latest Tag found (or assumed): $LATEST_TAG"
+
+          # 2. 检查并确保首次从 v1.0.0 开始
+          if [ "$LATEST_TAG" = "$START_TAG" ] && [ -z "$(git tag -l "${TAG_PREFIX}*")" ]; then
+              # 仓库中没有标签，这次生成的标签就是 v1.0.0
+              NEW_TAG="$START_TAG"
+              echo "First run detected. New tag will be $NEW_TAG."
+          else
+              # 3. 移除前缀并解析版本号
+              VERSION_PARTS=$(echo $LATEST_TAG | sed "s/^$TAG_PREFIX//")
+              MAJOR=$(echo $VERSION_PARTS | awk -F. '{print $1}')
+              MINOR=$(echo $VERSION_PARTS | awk -F. '{print $2}')
+              PATCH=$(echo $VERSION_PARTS | awk -F. '{print $3}')
+
+              # 4. 递增 Patch 版本
+              NEW_PATCH=$((PATCH + 1))
+              NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+              NEW_TAG="${TAG_PREFIX}$NEW_VERSION"
+              echo "Patch incremented. New tag is $NEW_TAG."
+          fi
+
+          # 5. 创建并推送新标签
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git tag $NEW_TAG
+          
+          # 使用 GITHUB_TOKEN 推送标签
+          GIT_PUSH_URL="https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push $GIT_PUSH_URL refs/tags/$NEW_TAG
+
+          # 6. 将新标签设置为步骤输出，供后续使用
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
