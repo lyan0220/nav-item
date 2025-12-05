@@ -29,7 +29,7 @@ jobs:
 
       - name: ⚙️ Auto-Tag and Set Version
         id: tag
-        uses: actions-ecosystem/action-release@v1 
+        uses: actions-ecosystem/action-release@v1
         with:
           increment: patch
           github_token: ${{ secrets.GITHUB_TOKEN }}
