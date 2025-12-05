@@ -805,13 +805,14 @@ function onTouchEnd() {
 <style scoped>
 .home-container {
   background-color: transparent;
-  min-height: 95vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  position: static;
-  padding-top: 50px;
+  position: relative;
+  padding-top: 0;
   isolation: isolate;
   color: var(--global-text-color, #000);
+  overflow-x: hidden;
 }
 
 .home-container * {
