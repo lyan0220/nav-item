@@ -805,7 +805,7 @@ function onTouchEnd() {
 <style scoped>
 .home-container {
   background-color: transparent;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -813,6 +813,7 @@ function onTouchEnd() {
   isolation: isolate;
   color: var(--global-text-color, #000);
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .home-container * {
@@ -1000,6 +1001,7 @@ function onTouchEnd() {
   padding: 1.4rem 0;
   position: static;
   z-index: 2;
+  margin-top: 60px;
 }
 
 .search-box-wrapper {
